@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "eventemitter3": "^4.0.7",
+    "isomorphic-git": "^1.21.0",
     "through": "^2.3.8"
   },
   "devDependencies": {

@@ -18,6 +18,7 @@ import {
   noCache,
 } from './util';
 import { Service } from './service';
+import isomorphicGit from 'isomorphic-git';
 
 interface GitServerOptions extends ServerOptions {
   type: 'http' | 'https';
@@ -240,30 +241,16 @@ export class Git<T = any> extends EventEmitter<GitEventInterface<T>> {
    */
   create(repo: string, callback: (error?: Error) => void) {
     const next = () => {
-      let ps;
-      let _error = '';
-
       const dir = this.dirMap(repo);
 
-      if (this.checkout) {
-        ps = spawn('git', ['init', dir]);
-      } else {
-        ps = spawn('git', ['init', '--bare', dir]);
-      }
-
-      ps.stderr.on('data', function (chunk: string) {
-        _error += chunk;
-      });
-
-      ps.on('exit', (code) => {
-        if (!callback) {
-          return;
-        } else if (code) {
-          callback(new Error(_error));
-        } else {
+      isomorphicGit
+        .init({ fs, dir, bare: !this.checkout })
+        .then(() => {
           callback();
-        }
-      });
+        })
+        .catch((_error) => {
+          callback(new Error(_error));
+        });
     };
 
     if (typeof callback !== 'function')
