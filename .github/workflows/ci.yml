@@ -20,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
-      - uses: volta-cli/action@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 18
       - name: install dependencies
         run: yarn install
       - name: lint
@@ -32,46 +32,21 @@ jobs:
           CI: true
 
   test:
-    name: 'Node ${{ matrix.node }} - ${{ matrix.os }}'
+    name: 'Test (Node ${{ matrix.node-version }})'
     runs-on: ${{ matrix.os }}-latest
 
     strategy:
       matrix:
-        node: ['16', 'latest']
         os: [ubuntu, macOS, windows]
 
     steps:
-      - uses: actions/checkout@v1
-      - uses: volta-cli/action@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 18
       - name: install dependencies
         run: yarn install
       - name: test
         run: yarn test
         env:
           CI: true
-
-  gh-release:
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '16.x'
-      - uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.GH_PAGES_DEPLOY }}
-      - name: Release to GitHub Pages
-        env:
-          USE_SSH: true
-          GIT_USER: git
-        run: |
-          git config --global user.email "gabecsapo@gmail.com"
-          git config --global user.name "Gabriel J. Csapo"
-          yarn install
-          yarn build
-          cd website
-          yarn install
-          yarn deploy
