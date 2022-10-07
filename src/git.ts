@@ -523,7 +523,10 @@ export class Git extends EventEmitter implements GitEvents {
     const createServer =
       options.type == 'http'
         ? http.createServer
-        : https.createServer.bind(this, options);
+        : (https.createServer.bind(
+            this,
+            options
+          ) as any as typeof http.createServer);
 
     this.server = createServer((req, res) => {
       this.handle(req, res);
