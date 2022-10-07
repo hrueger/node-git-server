@@ -1,5 +1,5 @@
 import http from 'http';
-import EventEmitter from 'events';
+import EventEmitter from 'eventemitter3';
 
 export class HttpDuplex<T = any> extends EventEmitter {
   setHeader(arg0: string, arg1: string) {

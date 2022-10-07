@@ -36,6 +36,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "eventemitter3": "^4.0.7",
     "through": "^2.3.8"
   },
   "devDependencies": {

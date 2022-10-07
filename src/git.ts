@@ -4,7 +4,7 @@ import http, { ServerOptions } from 'http';
 import https from 'https';
 
 import { spawn } from 'child_process';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'eventemitter3';
 
 import { HttpDuplex } from './http-duplex';
 import { parseRequest, HttpError, ParsedGitRequest } from './protocol';
@@ -17,6 +17,7 @@ import {
   BasicAuthError,
   noCache,
 } from './util';
+import { Service } from './service';
 
 interface GitServerOptions extends ServerOptions {
   type: 'http' | 'https';
@@ -39,7 +40,7 @@ export interface GitAuthenticateOptions {
 /**
  * An http duplex object (see below) with these extra properties:
  */
-export interface TagData<T> extends HttpDuplex<T> {
+export interface TagData<T> extends Service<T> {
   repo: string; // The string that defines the repo
   commit: string; // The string that defines the commit sha
   version: string; // The string that defines the tag being pushed
@@ -48,7 +49,7 @@ export interface TagData<T> extends HttpDuplex<T> {
 /**
  * Is a http duplex object (see below) with these extra properties
  */
-export interface PushData<T> extends HttpDuplex<T> {
+export interface PushData<T> extends Service<T> {
   repo: string; // The string that defines the repo
   commit: string; // The string that defines the commit sha
   branch: string; // The string that defines the branch
@@ -57,7 +58,7 @@ export interface PushData<T> extends HttpDuplex<T> {
 /**
  * an http duplex object (see below) with these extra properties
  */
-export interface FetchData<T> extends HttpDuplex<T> {
+export interface FetchData<T> extends Service<T> {
   repo: string; // The string that defines the repo
   commit: string; //  The string that defines the commit sha
 }
@@ -76,7 +77,7 @@ export interface HeadData<T> extends HttpDuplex<T> {
   repo: string; // The string that defines the repo
 }
 
-export interface GitEvents<T> {
+export type GitEventInterface<T> = {
   /**
    * @example
    * repos.on('push', function (push) { ... }
@@ -86,7 +87,7 @@ export interface GitEvents<T> {
    * Exactly one listener must call `push.accept()` or `push.reject()`. If there are
    * no listeners, `push.accept()` is called automatically.
    **/
-  on(event: 'push', listener: (push: PushData<T>) => void): this;
+  push: [PushData<T>];
 
   /**
    * @example
@@ -96,7 +97,7 @@ export interface GitEvents<T> {
    * Exactly one listener must call `tag.accept()` or `tag.reject()`. If there are
    * No listeners, `tag.accept()` is called automatically.
    **/
-  on(event: 'tag', listener: (tag: TagData<T>) => void): this;
+  tag: [TagData<T>];
 
   /**
    * @example
@@ -108,7 +109,7 @@ export interface GitEvents<T> {
    * Exactly one listener must call `fetch.accept()` or `fetch.reject()`. If there are
    * no listeners, `fetch.accept()` is called automatically.
    **/
-  on(event: 'fetch', listener: (fetch: FetchData<T>) => void): this;
+  fetch: [FetchData<T>];
 
   /**
    * @example
@@ -119,7 +120,7 @@ export interface GitEvents<T> {
    * Exactly one listener must call `info.accept()` or `info.reject()`. If there are
    * no listeners, `info.accept()` is called automatically.
    **/
-  on(event: 'info', listener: (info: InfoData<T>) => void): this;
+  info: [HttpDuplex<T>];
 
   /**
    * @example
@@ -131,9 +132,12 @@ export interface GitEvents<T> {
    * no listeners, `head.accept()` is called automatically.
    *
    **/
-  on(event: 'head', listener: (head: HeadData<T>) => void): this;
-}
-export class Git<T = any> extends EventEmitter implements GitEvents<T> {
+  head: [HttpDuplex<T>];
+
+  error: [Error];
+};
+
+export class Git<T = any> extends EventEmitter<GitEventInterface<T>> {
   dirMap: (dir?: string) => string;
 
   authenticate:
@@ -441,7 +445,7 @@ export class Git<T = any> extends EventEmitter implements GitEvents<T> {
     );
 
     action.on('header', () => {
-      const evName = action.evName;
+      const evName = action.evName as any;
       if (evName) {
         const anyListeners = this.listeners(evName).length > 0;
         this.emit(evName, action);

@@ -197,9 +197,9 @@ export class Service<T> extends HttpDuplex<T> {
     });
   }
 
-  log() {
+  log(...args: unknown[]) {
     // eslint-disable-next-line prefer-rest-params
-    const _log = util.format(...arguments);
+    const _log = util.format(...args);
     const SIDEBAND = String.fromCharCode(2); // PROGRESS
     const message = `${SIDEBAND}${_log}\n`;
     const formattedMessage = Buffer.from(packSideband(message));
