@@ -240,11 +240,10 @@ export class Git<T = any> extends EventEmitter<GitEventInterface<T>> {
    * @param  callback - Optionally get a callback `cb(err)` to be notified when the repository was created.
    */
   create(repo: string, callback: (error?: Error) => void) {
+    const dir = this.dirMap(repo);
     const next = () => {
-      const dir = this.dirMap(repo);
-
       isomorphicGit
-        .init({ fs, dir, bare: !this.checkout })
+        .init({ fs, dir, bare: !this.checkout, defaultBranch: 'main' })
         .then(() => {
           callback();
         })
@@ -263,7 +262,7 @@ export class Git<T = any> extends EventEmitter<GitEventInterface<T>> {
     const exists = this.exists(repo);
 
     if (!exists) {
-      this.mkdir(repo);
+      this.mkdir(dir);
     }
 
     next();
