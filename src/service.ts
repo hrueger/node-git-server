@@ -191,9 +191,13 @@ export class Service<T> extends HttpDuplex<T> {
       });
     });
 
-    this.once('reject', function onReject(code: number, msg: string) {
-      res.statusCode = code;
-      res.end(msg);
+    this.once('reject', (code: number, msg: string) => {
+      const SIDEBAND = String.fromCharCode(3); // ERROR
+      const message = `${SIDEBAND}${msg}`;
+      const formattedMessage = Buffer.from(packSideband(message));
+      res.write(formattedMessage);
+      res.write(Buffer.from('0000'));
+      res.end();
     });
   }
 
