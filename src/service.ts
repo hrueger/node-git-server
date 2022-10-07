@@ -195,6 +195,9 @@ export class Service<T> extends HttpDuplex<T> {
       const SIDEBAND = String.fromCharCode(3); // ERROR
       const message = `${SIDEBAND}${msg}`;
       const formattedMessage = Buffer.from(packSideband(message));
+      if (/git\/glue\/\.*/.test(req.headers['user-agent'] || '')) {
+        res.statusCode = code;
+      }
       res.write(formattedMessage);
       res.write(Buffer.from('0000'));
       res.end();
