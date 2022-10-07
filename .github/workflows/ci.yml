@@ -32,7 +32,7 @@ jobs:
           CI: true
 
   test:
-    name: 'Test (Node ${{ matrix.node-version }})'
+    name: 'Test (${{ matrix.os }})'
     runs-on: ${{ matrix.os }}-latest
 
     strategy:
