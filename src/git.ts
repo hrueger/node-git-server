@@ -569,7 +569,11 @@ export class Git<T = any> extends EventEmitter implements GitEvents<T> {
       this.handle(req, res);
     });
 
-    this.server.listen(...(options?.host ? [port, options.host, callback] : [port, callback]));
+    if (options?.host) {
+      this.server.listen(port, options.host, callback);
+    } else {
+      this.server.listen(port, callback);
+    }
 
     return this;
   }
