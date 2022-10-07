@@ -3,7 +3,7 @@ import path from 'path';
 import { spawn, exec, SpawnOptionsWithoutStdio } from 'child_process';
 import http from 'http';
 
-import { Git } from './git';
+import { Git, GitAuthenticateOptions } from './git';
 
 const wrapCallback = (func: { (callback: any): void }) => {
   return new Promise((resolve) => {
@@ -13,7 +13,7 @@ const wrapCallback = (func: { (callback: any): void }) => {
 
 describe('git', () => {
   test('create, push to, and clone a repo', async () => {
-    expect.assertions(11);
+    expect.assertions(12);
 
     let lastCommit: string;
 
@@ -27,8 +27,11 @@ describe('git', () => {
     fs.mkdirSync(srcDir, '0700');
     fs.mkdirSync(dstDir, '0700');
 
-    const repos = new Git(repoDir, {
+    const repos = new Git<string>(repoDir, {
       autoCreate: true,
+      authenticate: (options: GitAuthenticateOptions) => {
+        return `my request context for repo: ${options.repo}`;
+      },
     });
     const port = Math.floor(Math.random() * ((1 << 16) - 1e4)) + 1e4;
     const server = http
@@ -38,6 +41,8 @@ describe('git', () => {
       .listen(port);
 
     repos.on('push', (push) => {
+      expect(push.context).toBe('my request context for repo: xyz/doom');
+
       expect(push.repo).toBe('xyz/doom');
       expect(push.commit).toBe(lastCommit);
       expect(push.branch).toBe('master');
@@ -644,17 +649,16 @@ describe('git', () => {
 
     const repos = new Git(repoDir, {
       autoCreate: true,
-      authenticate: ({ type, repo, user }, next) => {
+      authenticate: async ({ type, repo, getUser }) => {
         if (type === 'fetch' && repo === 'doom') {
-          user((username, password) => {
-            if (username == 'root' && password == 'root') {
-              next();
-            } else {
-              next(new Error('that is not the correct password'));
-            }
-          });
+          const [username, password] = await getUser();
+          if (username == 'root' && password == 'root') {
+            return;
+          } else {
+            throw new Error('that is not the correct password');
+          }
         } else {
-          next(new Error('that is not the correct password'));
+          throw new Error('that is not the correct password');
         }
       },
     });
@@ -709,9 +713,13 @@ describe('git', () => {
     fs.mkdirSync(srcDir, '0700');
     fs.mkdirSync(dstDir, '0700');
 
-    const repos = new Git(repoDir, {
+    interface Context {
+      username: string;
+    }
+
+    const repos = new Git<Context>(repoDir, {
       autoCreate: true,
-      authenticate: ({ type, repo, user, headers }, next) => {
+      authenticate: async ({ type, repo, getUser, headers }) => {
         if (type === 'fetch' && repo === 'doom') {
           expect(headers['host']).toBeTruthy();
           expect(headers['user-agent']).toBeTruthy();
@@ -719,15 +727,16 @@ describe('git', () => {
           expect(headers['pragma']).toBeTruthy();
           expect(headers['accept-encoding']).toBeTruthy();
 
-          user((username, password) => {
-            if (username == 'root' && password == 'root') {
-              next();
-            } else {
-              next(new Error('that is not the correct password'));
-            }
-          });
+          const [username, password] = await getUser();
+          if (username == 'root' && password == 'root') {
+            return {
+              username: username,
+            };
+          } else {
+            throw new Error('that is not the correct password');
+          }
         } else {
-          next(new Error('that is not the correct password'));
+          throw new Error('that is not the correct password');
         }
       },
     });
@@ -782,20 +791,14 @@ describe('git', () => {
 
     const repos = new Git(repoDir, {
       autoCreate: true,
-      authenticate: ({ type, repo, user }) => {
-        return new Promise(function (resolve, reject) {
-          if (type === 'fetch' && repo === 'doom') {
-            user((username, password) => {
-              if (username == 'root' && password == 'root') {
-                return resolve(void 0);
-              } else {
-                return reject('that is not the correct password');
-              }
-            });
-          } else {
-            return reject('that is not the correct password');
+      authenticate: async ({ type, repo, getUser }) => {
+        if (type === 'fetch' && repo === 'doom') {
+          const [username, password] = await getUser();
+          if (username == 'root' && password == 'root') {
+            return;
           }
-        });
+        }
+        throw new Error('that is not the correct password');
       },
     });
     const port = Math.floor(Math.random() * ((1 << 16) - 1e4)) + 1e4;
